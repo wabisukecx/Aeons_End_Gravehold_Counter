@@ -78,20 +78,15 @@ for key, file_obj in music_data.items():
         else:
             js_music_data[key] = file_obj
 
-# 一意のタイムスタンプ
-timestamp = int(time.time() * 1000)
-
 html_code = f"""
 <div id="persistent-music-system">
     <div id="music-controls" style="text-align: center; margin: 20px 0; padding: 20px; background: linear-gradient(135deg, #e3f2fd, #bbdefb); border-radius: 10px; border: 2px solid #2196F3;">
         <h3 style="margin-top: 0;">🎵 永続的音楽切り替えシステム</h3>
         
-        <!-- iOS対応：初期化ボタン -->
         <button id="init-audio" onclick="initializeAudioContext()" style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 16px;">
             🎵 音楽システム初期化 (iOS対応)
         </button>
         
-        <!-- フォールバック：シンプル初期化 -->
         <button id="simple-init" onclick="simpleInitialization()" style="padding: 10px 20px; background: #9C27B0; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 16px; display: none;">
             🔧 シンプル初期化
         </button>
@@ -103,7 +98,6 @@ html_code = f"""
             🔇 音楽システム無効化
         </button>
         
-        <!-- 手動再生ボタン (iOS用フォールバック) -->
         <button id="manual-play" onclick="manualPlayCurrentMusic()" style="padding: 10px 20px; background: #FF9800; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; font-size: 16px; display: none;">
             🔄 手動再生
         </button>
@@ -114,14 +108,13 @@ html_code = f"""
         <div id="ios-notice" style="margin-top: 10px; color: #FF9800; font-size: 14px;">📱 iOS/iPadの場合：まず「音楽システム初期化」をタップしてください</div>
     </div>
     
-    <!-- 永続化された音楽要素 -->
     <div id="persistent-audio-elements" style="display: none;">
 """
 
 # 各音楽要素を追加
 for key, b64_data in js_music_data.items():
     html_code += f"""
-        <audio id="persistent-audio-{key}" loop preload="auto" data-key="{key}" muted>
+        <audio id="persistent-audio-{key}" loop preload="auto" data-key="{key}" muted playsinline>
             <source src="data:audio/mp3;base64,{b64_data}" type="audio/mp3">
         </audio>
     """
@@ -145,55 +138,83 @@ if (!window.musicSystemInitialized) {{
 
 // iOS対応：Audio Context初期化
 function initializeAudioContext() {{
-    console.log('Audio Context初期化開始');
+    console.log('🎵 Audio Context初期化開始');
+    updateDebugInfo('初期化開始...');
     
-    // 全てのオーディオ要素を取得
     const audioElements = document.querySelectorAll('[id^="persistent-audio-"]');
-    let initSuccessCount = 0;
-    
-    // 各オーディオ要素を順次初期化
-    audioElements.forEach((audio, index) => {{
-        // ミュートを解除
-        audio.muted = false;
-        
-        // 短時間再生して停止（iOS Audio Context有効化）
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {{
-            playPromise.then(() => {{
-                console.log(`オーディオ ${{audio.id}} 初期化成功`);
-                setTimeout(() => {{
-                    audio.pause();
-                    audio.currentTime = 0;
-                }}, 100);
-                
-                initSuccessCount++;
-                if (initSuccessCount === audioElements.length) {{
-                    onAudioInitializationComplete();
-                }}
-            }}).catch(error => {{
-                console.error(`オーディオ ${{audio.id}} 初期化失敗:`, error);
-                initSuccessCount++;
-                if (initSuccessCount === audioElements.length) {{
-                    onAudioInitializationComplete();
-                }}
-            }});
-        }}
-    }});
+    console.log(`🎵 発見されたオーディオ要素数: ${{audioElements.length}}`);
+    updateDebugInfo(`オーディオ要素: ${{audioElements.length}}個発見`);
     
     if (audioElements.length === 0) {{
-        console.log('音楽ファイルが見つかりません');
-        document.getElementById('music-status').innerHTML = '⚠️ 音楽ファイルが見つかりません';
+        console.error('❌ 音楽ファイルが見つかりません');
+        document.getElementById('music-status').innerHTML = '❌ 音楽ファイルが見つかりません';
+        updateDebugInfo('エラー: 音楽ファイルなし');
         return;
     }}
     
-    window.audioContextInitialized = true;
+    let initSuccessCount = 0;
+    let initErrorCount = 0;
+    
+    audioElements.forEach((audio, index) => {{
+        console.log(`🎵 オーディオ ${{audio.id}} 初期化中...`);
+        updateDebugInfo(`${{audio.id}} 初期化中...`);
+        
+        audio.muted = false;
+        audio.volume = 0.5;
+        
+        const playPromise = audio.play();
+        
+        if (playPromise !== undefined) {{
+            playPromise.then(() => {{
+                console.log(`✅ オーディオ ${{audio.id}} 初期化成功`);
+                updateDebugInfo(`${{audio.id}} 成功`);
+                
+                setTimeout(() => {{
+                    audio.pause();
+                    audio.currentTime = 0;
+                }}, 50);
+                
+                initSuccessCount++;
+                checkInitializationComplete(audioElements.length, initSuccessCount, initErrorCount);
+                
+            }}).catch(error => {{
+                console.error(`❌ オーディオ ${{audio.id}} 初期化失敗:`, error);
+                updateDebugInfo(`${{audio.id}} 失敗: ${{error.message}}`);
+                initErrorCount++;
+                checkInitializationComplete(audioElements.length, initSuccessCount, initErrorCount);
+            }});
+        }} else {{
+            console.error(`❌ ${{audio.id}}: playPromise undefined`);
+            updateDebugInfo(`${{audio.id}} playPromise undefined`);
+            initErrorCount++;
+            checkInitializationComplete(audioElements.length, initSuccessCount, initErrorCount);
+        }}
+    }});
+    
+    setTimeout(() => {{
+        if (!window.audioContextInitialized) {{
+            console.log('⏰ 初期化タイムアウト - シンプル初期化を提案');
+            updateDebugInfo('タイムアウト - シンプル初期化を試してください');
+            document.getElementById('simple-init').style.display = 'inline-block';
+            document.getElementById('music-status').innerHTML = '⚠️ 初期化タイムアウト - シンプル初期化をお試しください';
+        }}
+    }}, 5000);
 }}
 
-// 初期化完了時の処理
-function onAudioInitializationComplete() {{
-    console.log('全音楽ファイル初期化完了');
+function checkInitializationComplete(totalCount, successCount, errorCount) {{
+    console.log(`🎵 進捗: ${{successCount}}成功 + ${{errorCount}}失敗 / ${{totalCount}}合計`);
     
-    // UIを更新
+    if (successCount + errorCount >= totalCount) {{
+        console.log('🎵 全要素処理完了');
+        window.audioContextInitialized = true;
+        onAudioInitializationComplete();
+    }}
+}}
+
+function onAudioInitializationComplete() {{
+    console.log('🎉 全音楽ファイル初期化完了');
+    updateDebugInfo('初期化完了！');
+    
     document.getElementById('init-audio').style.display = 'none';
     document.getElementById('enable-music').style.display = 'inline-block';
     document.getElementById('manual-play').style.display = 'inline-block';
@@ -201,16 +222,44 @@ function onAudioInitializationComplete() {{
     document.getElementById('music-status').innerHTML = '✅ 初期化完了 - 音楽システムを有効化してください';
     document.getElementById('music-status').style.color = '{status_color}';
     
-    // 自動的に音楽システムを有効化
     setTimeout(() => {{
+        console.log('🎵 自動的に音楽システムを有効化');
+        updateDebugInfo('音楽システム自動有効化中...');
         enableMusicSystem();
-    }}, 500);
+    }}, 1000);
 }}
 
-// 音楽システム有効化
+function simpleInitialization() {{
+    console.log('🔧 シンプル初期化開始');
+    updateDebugInfo('シンプル初期化開始...');
+    
+    window.audioContextInitialized = true;
+    
+    document.getElementById('init-audio').style.display = 'none';
+    document.getElementById('simple-init').style.display = 'none';
+    document.getElementById('enable-music').style.display = 'inline-block';
+    document.getElementById('manual-play').style.display = 'inline-block';
+    document.getElementById('ios-notice').style.display = 'none';
+    document.getElementById('music-status').innerHTML = '🔧 シンプル初期化完了 - 手動再生が必要な場合があります';
+    document.getElementById('music-status').style.color = '{status_color}';
+    
+    updateDebugInfo('シンプル初期化完了 - 手動操作モード');
+    
+    setTimeout(() => {{
+        enableMusicSystem();
+    }}, 1000);
+    
+    console.log('🔧 シンプル初期化完了');
+}}
+
 function enableMusicSystem() {{
+    console.log('🎵 音楽システム有効化開始');
+    updateDebugInfo('音楽システム有効化中...');
+    
     if (!window.audioContextInitialized) {{
+        console.log('❌ Audio Context未初期化');
         document.getElementById('music-status').innerHTML = '⚠️ 先に音楽システムを初期化してください';
+        updateDebugInfo('エラー: Audio Context未初期化');
         return;
     }}
     
@@ -222,13 +271,15 @@ function enableMusicSystem() {{
     document.getElementById('music-status').innerHTML = '🎵 音楽: 有効';
     document.getElementById('music-status').style.color = '{status_color}';
     
-    // 現在のステータスの音楽を再生
+    console.log('🎵 現在のステータス音楽を再生:', '{current_status_key}');
+    updateDebugInfo('現在の音楽を再生中...');
+    
     playStatusMusic('{current_status_key}');
     
-    console.log('音楽システム有効化完了');
+    console.log('🎉 音楽システム有効化完了');
+    updateDebugInfo('音楽システム有効化完了');
 }}
 
-// 音楽システム無効化
 function disableMusicSystem() {{
     window.musicSystemEnabled = false;
     localStorage.setItem('aeons_music_enabled', 'false');
@@ -243,7 +294,6 @@ function disableMusicSystem() {{
     console.log('音楽システム無効化完了');
 }}
 
-// 全音楽停止
 function stopAllMusic() {{
     document.querySelectorAll('[id^="persistent-audio-"]').forEach(function(audio) {{
         audio.pause();
@@ -252,7 +302,6 @@ function stopAllMusic() {{
     window.currentPlayingAudio = null;
 }}
 
-// 手動再生（iOS用フォールバック）
 function manualPlayCurrentMusic() {{
     if (!window.musicSystemEnabled) {{
         document.getElementById('music-status').innerHTML = '⚠️ 音楽システムが無効です';
@@ -263,7 +312,6 @@ function manualPlayCurrentMusic() {{
     playStatusMusic('{current_status_key}', true);
 }}
 
-// ステータス音楽再生（iOS対応版）
 function playStatusMusic(statusKey, forcePlay = false) {{
     if (!window.audioContextInitialized) {{
         console.log('Audio Context未初期化');
@@ -285,20 +333,17 @@ function playStatusMusic(statusKey, forcePlay = false) {{
         return;
     }}
     
-    // 同じステータスで既に再生中の場合
     if (window.currentStatus === statusKey && window.currentPlayingAudio === targetAudio && !targetAudio.paused) {{
         console.log('同じ音楽が既に再生中');
         return;
     }}
     
-    // 現在の音楽を停止
     if (window.currentPlayingAudio && window.currentPlayingAudio !== targetAudio) {{
         window.currentPlayingAudio.pause();
         window.currentPlayingAudio.currentTime = 0;
         console.log('前の音楽停止');
     }}
     
-    // 新しい音楽を再生
     targetAudio.muted = false;
     const playPromise = targetAudio.play();
     
@@ -323,48 +368,71 @@ function playStatusMusic(statusKey, forcePlay = false) {{
             console.error('音楽再生エラー:', error);
             document.getElementById('current-track').innerHTML = '⚠️ 再生エラー - 手動再生ボタンをお試しください';
             document.getElementById('current-track').style.color = '#FF0000';
-            
-            // 手動再生ボタンを表示
             document.getElementById('manual-play').style.display = 'inline-block';
         }});
     }}
 }}
 
-// ページ読み込み時の処理
+function updateDebugInfo(message) {{
+    const timestamp = new Date().toLocaleTimeString();
+    const debugElement = document.getElementById('debug-info');
+    if (debugElement) {{
+        debugElement.innerHTML = `[${{timestamp}}] ${{message}}`;
+    }}
+}}
+
 window.addEventListener('load', function() {{
     console.log('ページ読み込み完了');
     restoreUIState();
 }});
 
-// UI状態復元
 function restoreUIState() {{
+    console.log('🔄 UI状態復元開始');
+    updateDebugInfo('UI状態復元中...');
+    
     if (window.audioContextInitialized) {{
+        console.log('✅ Audio Context初期化済み');
+        updateDebugInfo('Audio Context: 初期化済み');
+        
         document.getElementById('init-audio').style.display = 'none';
+        document.getElementById('simple-init').style.display = 'none';
         document.getElementById('ios-notice').style.display = 'none';
         document.getElementById('manual-play').style.display = 'inline-block';
         
         if (window.musicSystemEnabled) {{
+            console.log('🎵 音楽システム有効状態を復元');
+            updateDebugInfo('音楽システム: 有効');
+            
             document.getElementById('enable-music').style.display = 'none';
             document.getElementById('disable-music').style.display = 'inline-block';
             document.getElementById('music-status').innerHTML = '🎵 音楽: 有効';
             document.getElementById('music-status').style.color = '{status_color}';
             
-            // 音楽を再開（iOS対応）
             setTimeout(() => {{
                 if (window.pendingStatusChange) {{
+                    console.log('🎵 保留中のステータス変更を実行:', window.pendingStatusChange);
+                    updateDebugInfo('保留中のステータス変更実行');
                     playStatusMusic(window.pendingStatusChange);
                     window.pendingStatusChange = null;
                 }} else {{
+                    console.log('🎵 現在のステータス音楽を再開:', '{current_status_key}');
+                    updateDebugInfo('現在の音楽を再開');
                     playStatusMusic('{current_status_key}');
                 }}
             }}, 1000);
         }} else {{
+            console.log('🔇 音楽システム無効状態を復元');
+            updateDebugInfo('音楽システム: 無効');
+            
             document.getElementById('enable-music').style.display = 'inline-block';
             document.getElementById('disable-music').style.display = 'none';
             document.getElementById('music-status').innerHTML = '🔇 音楽: 無効';
             document.getElementById('music-status').style.color = '{status_color}';
         }}
     }} else {{
+        console.log('❌ Audio Context未初期化');
+        updateDebugInfo('Audio Context: 未初期化');
+        
         document.getElementById('init-audio').style.display = 'inline-block';
         document.getElementById('enable-music').style.display = 'none';
         document.getElementById('disable-music').style.display = 'none';
@@ -372,12 +440,12 @@ function restoreUIState() {{
         document.getElementById('music-status').innerHTML = '🔇 音楽: 未初期化';
         document.getElementById('music-status').style.color = '{status_color}';
     }}
+    
+    console.log('🔄 UI状態復元完了');
 }}
 
-// 即座に状態復元
 setTimeout(restoreUIState, 100);
 
-// HP変更時の音楽切り替え（Streamlit側から呼び出し）
 setTimeout(function() {{
     console.log('Streamlit再描画後チェック:', '{current_status_key}');
     if (window.musicSystemEnabled && window.audioContextInitialized) {{
@@ -385,7 +453,6 @@ setTimeout(function() {{
     }}
 }}, 300);
 
-// グローバル関数として公開
 window.playStatusMusic = playStatusMusic;
 window.enableMusicSystem = enableMusicSystem;
 window.disableMusicSystem = disableMusicSystem;
