@@ -18,37 +18,37 @@ def get_status_info(hp):
     """HPに基づいてステータス情報を返す"""
     if hp >= 26:
         return {
-            "title": "司令部機能正常「黎明の静寂」",
-            "restriction": "完全な情報共有可能",
+            "title": "グレーブホールド機能正常「黎明の静寂」",
+            "restriction": "すべて公開",
             "consultation_time": "無制限",
-            "description": "光が洞窟を照らし、魔道士たちの連携は完璧だ。防衛陣形は保たれ、まだ希望の灯は消えていない。",
+            "description": "破孔魔術による防衛システムは万全、破孔魔術師たちの連携も完璧だ。グレーブホールドの防衛は保たれ、希望の灯は消えていない。",
             "color": "#4CAF50",  # 緑
             "music_key": "normal"
         }
     elif hp >= 16:
         return {
-            "title": "通信障害発生「響く警鐘」",
-            "restriction": "呪文カードのみ公開可能",
-            "consultation_time": "制限あり",
-            "description": "警鐘が鳴り響く。瓦礫が司令部の一部を塞ぎ、補給路が寸断された。魔道士たちは戦闘計画だけを必死に共有する。『呪文の準備状況を報告しろ！』",
+            "title": "ネメシス襲来「響く警鐘」",
+            "restriction": "呪文カードのみ公開",
+            "consultation_time": "攻撃対象の相談のみ",
+            "description": "ネメシスたちによる損害が出始めた。辺りで警鐘が鳴り響く。瓦礫がグレーブホールドの一部を塞ぎ、補給路が寸断された。破孔魔術師たちは戦闘計画だけを必死に共有する",
             "color": "#FF9800",  # オレンジ
             "music_key": "warning"
         }
     elif hp >= 6:
         return {
-            "title": "司令部半壊「崩れゆく防壁」",
-            "restriction": "手札公開禁止、数値のコミュニケーションのみ",
-            "consultation_time": "数値のみ",
-            "description": "天井が崩落し、煙と粉塵が視界を奪う。もはや互いの顔も見えない。声だけが頼りだ。",
+            "title": "グレーブホールド半壊「崩れゆく防壁」",
+            "restriction": "手札公開なし",
+            "consultation_time": "数値のコミュニケーションのみ",
+            "description": "ネメシスたちの攻撃により天井が崩落し、煙と粉塵が視界を奪う。もはや互いの顔も見えない。声だけが頼りだ。",
             "color": "#F44336",  # 赤
             "music_key": "danger"
         }
     elif hp >= 1:
         return {
-            "title": "陥落寸前「最後の抵抗」",
-            "restriction": "一切の相談禁止",
-            "consultation_time": "禁止",
-            "description": "もはや声も届かない。轟音と絶叫のみ。各魔道士は孤立し、本能と経験だけを頼りに呪文を紡ぐ。これが、グレイブホールド最後の時かもしれない…",
+            "title": "グレーブホールド陥落寸前「最後の抵抗」",
+            "restriction": "手札公開なし",
+            "consultation_time": "一切の相談禁止",
+            "description": "もはや声は届かない。轟音と絶叫のみ。破孔魔術師たちは孤立し、本能と経験を頼りに呪文を紡ぐ。これが、グレイブホールド最後かもしれない…",
             "color": "#9C27B0",  # 紫
             "music_key": "critical"
         }
@@ -57,7 +57,7 @@ def get_status_info(hp):
             "title": "GAME OVER",
             "restriction": "ゲーム終了",
             "consultation_time": "ゲーム終了",
-            "description": "グレイブホールドは陥落した。魔道士たちの抵抗も虚しく、ネメシスの支配が始まった…",
+            "description": "グレイブホールドは陥落した。破孔魔術師たちの抵抗も虚しく、ネメシスの支配が始まった…",
             "color": "#000000",  # 黒
             "music_key": "gameover"
         }
@@ -187,10 +187,10 @@ def create_persistent_music_system(music_data, current_status_key, music_enabled
                     window.currentPlayingAudio = targetAudio;
                     
                     const statusNames = {{
-                        'normal': '司令部機能正常',
-                        'warning': '通信障害発生',
-                        'danger': '司令部半壊',
-                        'critical': '陥落寸前',
+                        'normal': '黎明の静寂',
+                        'warning': '響く警鐘',
+                        'danger': '崩れゆく防壁',
+                        'critical': '最後の抵抗',
                         'gameover': 'ゲームオーバー'
                     }};
                     
@@ -227,10 +227,10 @@ def create_persistent_music_system(music_data, current_status_key, music_enabled
             
             // ステータス表示を更新
             const statusNames = {{
-                'normal': '司令部機能正常',
-                'warning': '通信障害発生',
-                'danger': '司令部半壊',
-                'critical': '陥落寸前',
+                'normal': '黎明の静寂',
+                'warning': '響く警鐘',
+                'danger': '崩れゆく防壁',
+                'critical': '最後の抵抗',
                 'gameover': 'ゲームオーバー'
             }};
             
@@ -469,14 +469,14 @@ with main_tabs[1]:
     st.subheader("🎵 ステータス別BGM設定")
     st.info("💡 **初期設定**: 各ステージ用の音楽ファイルをアップロードしてください。設定後は「ゲーム」タブでプレイしてください。")
     
-    music_tabs = st.tabs(["司令部正常", "通信障害", "司令部半壊", "陥落寸前", "ゲームオーバー"])
+    music_tabs = st.tabs(["黎明の静寂", "響く警鐘", "崩れゆく防壁", "最後の抵抗", "ゲームオーバー"])
 
     music_keys = ["normal", "warning", "danger", "critical", "gameover"]
     music_labels = [
-        "司令部機能正常 (HP 26-30)",
-        "通信障害発生 (HP 16-25)", 
-        "司令部半壊 (HP 6-15)",
-        "陥落寸前 (HP 1-5)",
+        "黎明の静寂 (HP 26-30)",
+        "響く警鐘 (HP 16-25)", 
+        "崩れゆく防壁 (HP 6-15)",
+        "最後の抵抗 (HP 1-5)",
         "ゲームオーバー (HP 0)"
     ]
 
